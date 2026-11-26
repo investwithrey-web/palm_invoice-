@@ -7,7 +7,8 @@ const os = require('os');
 
 const PORT = process.env.PORT || 3000;
 const BASE_DIR = __dirname;
-const DATA_DIR = path.join(BASE_DIR, 'data');
+const isVercel = Boolean(process.env.VERCEL);
+const DATA_DIR = isVercel ? '/tmp/data' : path.join(BASE_DIR, 'data');
 const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
 const USED_NUMBERS_FILE = path.join(DATA_DIR, 'used_numbers.json');
 
@@ -23,16 +24,34 @@ function getLocalIP() {
   return 'localhost';
 }
 
-// Ensure data files exist
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+// Ensure data files exist (safe for local & Vercel serverless /tmp)
+function ensureDataFiles() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(INVOICES_FILE)) {
+      const localInvoices = path.join(BASE_DIR, 'data', 'invoices.json');
+      if (fs.existsSync(localInvoices)) {
+        try { fs.copyFileSync(localInvoices, INVOICES_FILE); } catch {}
+      } else {
+        fs.writeFileSync(INVOICES_FILE, '[]', 'utf8');
+      }
+    }
+    if (!fs.existsSync(USED_NUMBERS_FILE)) {
+      const localNumbers = path.join(BASE_DIR, 'data', 'used_numbers.json');
+      if (fs.existsSync(localNumbers)) {
+        try { fs.copyFileSync(localNumbers, USED_NUMBERS_FILE); } catch {}
+      } else {
+        fs.writeFileSync(USED_NUMBERS_FILE, '[]', 'utf8');
+      }
+    }
+  } catch (err) {
+    console.warn('ensureDataFiles notice:', err.message);
+  }
 }
-if (!fs.existsSync(INVOICES_FILE)) {
-  fs.writeFileSync(INVOICES_FILE, '[]', 'utf8');
-}
-if (!fs.existsSync(USED_NUMBERS_FILE)) {
-  fs.writeFileSync(USED_NUMBERS_FILE, '[]', 'utf8');
-}
+
+ensureDataFiles();
 
 function readJSON(filePath, fallback = []) {
   try {
@@ -67,7 +86,8 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
-const server = http.createServer((req, res) => {
+const requestHandler = (req, res) => {
+  ensureDataFiles();
   const parsedUrl = url.parse(req.url, true);
   const pathname = decodeURIComponent(parsedUrl.pathname);
 
@@ -233,13 +253,19 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': contentType });
     fs.createReadStream(filePath).pipe(res);
   });
-});
+};
 
-server.listen(PORT, '0.0.0.0', () => {
-  const ip = getLocalIP();
-  console.log(`=======================================================`);
-  console.log(`🌴 Palm Resort Invoice Builder Server is Live!`);
-  console.log(`💻 Local (Mac):    http://localhost:${PORT}`);
-  console.log(`📱 Mobile (Phone): http://${ip}:${PORT}`);
-  console.log(`=======================================================`);
-});
+const server = http.createServer(requestHandler);
+
+if (require.main === module && !process.env.VERCEL) {
+  server.listen(PORT, '0.0.0.0', () => {
+    const ip = getLocalIP();
+    console.log(`=======================================================`);
+    console.log(`🌴 Palm Resort Invoice Builder Server is Live!`);
+    console.log(`💻 Local (Mac):    http://localhost:${PORT}`);
+    console.log(`📱 Mobile (Phone): http://${ip}:${PORT}`);
+    console.log(`=======================================================`);
+  });
+}
+
+module.exports = requestHandler;

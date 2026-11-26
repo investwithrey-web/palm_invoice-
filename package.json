@@ -4,6 +4,7 @@
   "description": "Smart Invoice Builder & Billing System for Palm Resort",
   "main": "server.js",
   "scripts": {
+    "build": "echo 'Ready'",
     "start": "node server.js"
   },
   "keywords": ["invoice", "resort", "billing", "pdf"],
