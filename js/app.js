@@ -663,7 +663,6 @@
 
     const element = document.getElementById('invoicePaper');
     const prevTransform = element.style.transform;
-    element.style.transform = 'none';
 
     try {
       // Determine available PDF & Canvas engines
@@ -671,12 +670,49 @@
       const PDFClass = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
 
       if (h2c && PDFClass) {
-        // Render high-DPI canvas
+        showToast('Rendering complete A4 invoice PDF...', 'info');
+
+        // Render high-DPI canvas with desktop viewport dimensions so mobile doesn't clip right side
         const canvas = await h2c(element, {
           scale: 2,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          width: 794,
+          windowWidth: 1200,
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (clonedDoc) => {
+            // Force cloned preview to be fully rendered with desktop 794px width
+            const clonedPreview = clonedDoc.querySelector('.preview-container');
+            if (clonedPreview) {
+              clonedPreview.style.display = 'block';
+              clonedPreview.style.visibility = 'visible';
+              clonedPreview.style.width = '794px';
+              clonedPreview.style.maxWidth = '794px';
+              clonedPreview.style.padding = '0';
+              clonedPreview.style.margin = '0 auto';
+            }
+            const clonedWrapper = clonedDoc.querySelector('.invoice-paper-wrapper');
+            if (clonedWrapper) {
+              clonedWrapper.style.display = 'block';
+              clonedWrapper.style.width = '794px';
+              clonedWrapper.style.maxWidth = '794px';
+              clonedWrapper.style.overflow = 'visible';
+              clonedWrapper.style.padding = '0';
+              clonedWrapper.style.background = '#ffffff';
+            }
+            const clonedPaper = clonedDoc.getElementById('invoicePaper');
+            if (clonedPaper) {
+              clonedPaper.style.display = 'flex';
+              clonedPaper.style.transform = 'none';
+              clonedPaper.style.width = '794px';
+              clonedPaper.style.minWidth = '794px';
+              clonedPaper.style.maxWidth = '794px';
+              clonedPaper.style.margin = '0 auto';
+              clonedPaper.style.boxShadow = 'none';
+            }
+          }
         });
 
         // Initialize single A4 page document
