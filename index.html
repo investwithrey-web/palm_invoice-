@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Palm Resort - Instant Invoice Generator</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- High precision PDF rendering libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Embedded base64 logo for guaranteed offline loading -->
+  <script src="assets/logo.js"></script>
+</head>
+<body>
+  <!-- Top Application Navigation Bar -->
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="Tropical Sunset Palm Resort Logo.png" alt="Palm Resort Logo" class="brand-logo" id="appNavLogo" onerror="this.src=window.PALM_RESORT_LOGO_BASE64 || 'logo.png'">
+      <div>
+        <h1 class="brand-title">Palm Resort</h1>
+        <p class="brand-subtitle">Smart Invoice Builder & Billing System</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline" id="btnOpenMobileConnect" title="Connect Mobile Phone">
+        <span>📱 Phone</span>
+      </button>
+      <button type="button" class="btn btn-outline" id="btnQuickSample" title="Fill sample data to test">
+        <span>✨ Sample</span>
+      </button>
+      <button type="button" class="btn btn-outline" id="btnOpenHistory" title="View past invoices and used numbers">
+        <span>📋 History (<span id="headerUsedCount">0</span>/1000)</span>
+      </button>
+      <button type="button" class="btn btn-secondary" id="btnResetForm" title="Clear and prepare a fresh invoice">
+        <span>🔄 New</span>
+      </button>
+      <button type="button" class="btn btn-primary" id="btnDownloadPDF">
+        <span>📥 Download PDF</span>
+      </button>
+      <button type="button" class="btn btn-accent" id="btnPrintInvoice">
+        <span>🖨️ Print</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Tab Switcher (Visible on mobile/tablets) -->
+  <nav class="mobile-tab-nav" id="mobileTabNav">
+    <button type="button" class="mobile-tab-btn active" id="btnTabEdit">
+      <span>✏️ Edit Invoice Form</span>
+    </button>
+    <button type="button" class="mobile-tab-btn" id="btnTabPreview">
+      <span>📄 Live A4 Preview</span>
+      <span class="mobile-tab-badge" id="mobileTabBadge">₹ 0.00</span>
+    </button>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="app-main">
+    <!-- Left Column: Form Controls -->
+    <section class="form-container">
+      <form id="invoiceForm" autocomplete="off" onsubmit="return false;">
+        
+        <!-- Section 1: Invoice Meta & Generator -->
+        <div class="card">
+          <div class="card-header">
+            <h2>1. Invoice Number & Date</h2>
+            <span class="badge badge-info">Range: 1 - 1000</span>
+          </div>
+          <div class="card-body grid-2">
+            <div class="form-group">
+              <label for="invoiceNumber">
+                Invoice Number (1 - 1000) <span class="required">*</span>
+              </label>
+              <div class="input-with-button">
+                <input 
+                  type="number" 
+                  id="invoiceNumber" 
+                  name="invoiceNumber" 
+                  min="1" 
+                  max="1000" 
+                  placeholder="e.g. 1" 
+                  required
+                >
+                <button type="button" class="btn btn-sm btn-outline" id="btnNextNumber" title="Get next unused number (1-1000)">
+                  ⚡ Auto Next
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" id="btnRandomNumber" title="Get random unused number (1-1000)">
+                  🎲 Random
+                </button>
+              </div>
+              <small class="field-hint" id="invoiceNumberStatus">
+                Click "Auto Next" to pick the next unused number from 1 to 1000.
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label for="invoiceDate">Invoice Date <span class="required">*</span></label>
+              <input type="date" id="invoiceDate" name="invoiceDate" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Customer Details -->
+        <div class="card">
+          <div class="card-header">
+            <h2>2. Customer Information</h2>
+          </div>
+          <div class="card-body grid-2">
+            <div class="form-group">
+              <label for="customerName">Customer Name <span class="required">*</span></label>
+              <input 
+                type="text" 
+                id="customerName" 
+                name="customerName" 
+                placeholder="Enter customer / guest name" 
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="customerMobile">Customer Mobile Number <span class="required">*</span></label>
+              <input 
+                type="tel" 
+                id="customerMobile" 
+                name="customerMobile" 
+                placeholder="e.g. 9876543210" 
+                maxlength="15"
+                required
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Itemized Charges -->
+        <div class="card">
+          <div class="card-header flex-between">
+            <h2>3. Items / Services</h2>
+            <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">
+              + Add Item
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="items-table-wrapper">
+              <table class="form-items-table" id="itemsTable">
+                <thead>
+                  <tr>
+                    <th style="width: 38%;">Item / Description</th>
+                    <th style="width: 14%;">Price (₹)</th>
+                    <th style="width: 12%;">Qty</th>
+                    <th style="width: 14%;">Discount (₹)</th>
+                    <th style="width: 14%;">Total (₹)</th>
+                    <th style="width: 8%;"></th>
+                  </tr>
+                </thead>
+                <tbody id="itemsTableBody">
+                  <!-- Dynamic Item Rows Injected Here -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="quick-items-chips">
+              <span class="chips-label">Quick Suggestions:</span>
+              <button type="button" class="chip" data-item="Deluxe Cottage Room" data-price="3500">Deluxe Cottage</button>
+              <button type="button" class="chip" data-item="Executive Villa Stay" data-price="6000">Executive Villa</button>
+              <button type="button" class="chip" data-item="Swimming Pool Access Pass" data-price="400">Pool Pass</button>
+              <button type="button" class="chip" data-item="Buffet Breakfast & Dinner" data-price="1200">Buffet Meals</button>
+              <button type="button" class="chip" data-item="Banquet Hall Booking" data-price="25000">Banquet Booking</button>
+              <button type="button" class="chip" data-item="Extra Bed & Linen" data-price="800">Extra Bed</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Totals, Paid & Balance Due -->
+        <div class="card">
+          <div class="card-header">
+            <h2>4. Payment & Balance Calculation</h2>
+          </div>
+          <div class="card-body">
+            <div class="totals-grid">
+              <div class="totals-col">
+                <div class="form-group">
+                  <label for="taxRate">Tax / GST (Optional %)</label>
+                  <select id="taxRate" name="taxRate">
+                    <option value="0" selected>0% (No Tax)</option>
+                    <option value="5">5% (GST 5%)</option>
+                    <option value="12">12% (GST 12%)</option>
+                    <option value="18">18% (GST 18%)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="paymentMode">Payment Mode</label>
+                  <select id="paymentMode" name="paymentMode">
+                    <option value="UPI / Online" selected>UPI / Online Transfer</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Credit/Debit Card">Credit / Debit Card</option>
+                    <option value="Net Banking">Net Banking</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="totals-summary-box">
+                <div class="summary-line">
+                  <span>Subtotal:</span>
+                  <span id="formSubtotal">₹ 0.00</span>
+                </div>
+                <div class="summary-line text-success">
+                  <span>Total Discount:</span>
+                  <span id="formDiscount">- ₹ 0.00</span>
+                </div>
+                <div class="summary-line">
+                  <span>Tax Amount:</span>
+                  <span id="formTax">+ ₹ 0.00</span>
+                </div>
+                <div class="summary-line grand-total-line">
+                  <span>Total Amount:</span>
+                  <span id="formTotal">₹ 0.00</span>
+                </div>
+                
+                <hr class="summary-divider">
+
+                <div class="form-group" style="margin-top: 10px;">
+                  <label for="amountPaid">Amount Paid (₹) <span class="required">*</span></label>
+                  <input 
+                    type="number" 
+                    id="amountPaid" 
+                    name="amountPaid" 
+                    min="0" 
+                    step="any" 
+                    placeholder="0" 
+                    value="0"
+                  >
+                </div>
+
+                <div class="summary-line balance-due-line">
+                  <span class="balance-label">Balance Due:</span>
+                  <span id="formBalanceDue" class="balance-value">₹ 0.00</span>
+                </div>
+                <div id="paymentStatusBadge" class="status-badge badge-due">
+                  Payment Status: DUE
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5: Pre-filled Business Details (Accordion) -->
+        <details class="card card-accordion">
+          <summary class="card-header cursor-pointer">
+            <div class="flex-between w-100">
+              <h2>5. Business Details (Pre-filled for Palm Resort)</h2>
+              <span class="accordion-icon">▼</span>
+            </div>
+          </summary>
+          <div class="card-body grid-2">
+            <div class="form-group">
+              <label>Business Name</label>
+              <input type="text" id="businessName" value="Palm resort" readonly class="input-readonly">
+            </div>
+            <div class="form-group">
+              <label>Resort Mobile Number</label>
+              <input type="text" id="businessPhone" value="9997742709" readonly class="input-readonly">
+            </div>
+            <div class="form-group">
+              <label>Website</label>
+              <input type="text" id="businessWebsite" value="www.palmresort.online" readonly class="input-readonly">
+            </div>
+            <div class="form-group">
+              <label>Address</label>
+              <input type="text" id="businessAddress" value="palm resort near garh ganga up 244235" readonly class="input-readonly">
+            </div>
+          </div>
+        </details>
+
+        <!-- Section 6: Notes & Terms -->
+        <div class="card">
+          <div class="card-header">
+            <h2>6. Notes & Terms</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="invoiceNotes">Terms, Conditions & Notes</label>
+              <textarea id="invoiceNotes" rows="2">Thank you for choosing Palm Resort! Standard Check-in is 12:00 PM and Check-out is 11:00 AM. Please keep this invoice for your records.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form Submission / Quick Action Buttons -->
+        <div class="form-footer-actions">
+          <button type="button" class="btn btn-success btn-lg" id="btnSaveInvoice">
+            💾 Save Invoice & Mark Number As Used
+          </button>
+          <button type="button" class="btn btn-primary btn-lg" id="btnDownloadPDF2">
+            📥 Download PDF
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Right Column: Live Printable A4 Invoice Preview -->
+    <section class="preview-container">
+      <div class="preview-toolbar">
+        <span class="preview-title">📄 Live Invoice Preview (A4 Sheet)</span>
+        <div class="preview-controls">
+          <button type="button" class="btn btn-sm btn-outline" id="btnZoomOut">－</button>
+          <span id="zoomLevel">100%</span>
+          <button type="button" class="btn btn-sm btn-outline" id="btnZoomIn">＋</button>
+          <button type="button" class="btn btn-sm btn-outline" id="btnZoomReset">Reset</button>
+        </div>
+      </div>
+
+      <!-- Printable A4 Paper Container -->
+      <div class="invoice-paper-wrapper">
+        <div class="invoice-paper" id="invoicePaper">
+          
+          <!-- Invoice Header -->
+          <header class="invoice-sheet-header">
+            <div class="resort-identity">
+              <img 
+                src="Tropical Sunset Palm Resort Logo.png" 
+                alt="Palm Resort Logo" 
+                class="invoice-logo" 
+                id="invoiceSheetLogo"
+                onerror="this.src=window.PALM_RESORT_LOGO_BASE64 || 'logo.png'"
+              >
+              <div class="resort-text">
+                <h1 class="invoice-resort-name" id="previewBusinessName">Palm resort</h1>
+                <p class="invoice-resort-address" id="previewBusinessAddress">palm resort near garh ganga up 244235</p>
+                <div class="invoice-resort-contacts">
+                  <span><strong>Mobile:</strong> <span id="previewBusinessPhone">9997742709</span></span>
+                  <span class="sep">•</span>
+                  <span><strong>Web:</strong> <span id="previewBusinessWebsite">www.palmresort.online</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="invoice-meta-badge">
+              <div class="invoice-badge-title">TAX INVOICE</div>
+              <div class="invoice-number-box">
+                <span class="num-lbl">INVOICE NO:</span>
+                <span class="num-val" id="previewInvoiceNumber">#0001</span>
+              </div>
+              <div class="invoice-date-box">
+                <span class="date-lbl">Date:</span>
+                <span class="date-val" id="previewInvoiceDate">27 Nov 2026</span>
+              </div>
+            </div>
+          </header>
+
+          <hr class="invoice-divider-gold">
+
+          <!-- Bill To & Payment Mode Banner -->
+          <div class="invoice-bilto-section">
+            <div class="bill-to-box">
+              <span class="bill-to-label">BILLED TO / GUEST DETAILS:</span>
+              <h3 class="customer-name" id="previewCustomerName">Valued Guest</h3>
+              <p class="customer-mobile">
+                <strong>Contact / Mobile:</strong> <span id="previewCustomerMobile">+91 ----------</span>
+              </p>
+            </div>
+
+            <div class="payment-overview-box">
+              <div class="overview-item">
+                <span class="ov-label">Payment Mode:</span>
+                <span class="ov-val" id="previewPaymentMode">UPI / Online</span>
+              </div>
+              <div class="overview-item">
+                <span class="ov-label">Status:</span>
+                <span class="ov-badge" id="previewStatusBadge">DUE</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <table class="invoice-items-table">
+            <thead>
+              <tr>
+                <th class="th-sr">#</th>
+                <th class="th-desc">Item & Description</th>
+                <th class="th-qty text-center">Qty</th>
+                <th class="th-rate text-right">Price (₹)</th>
+                <th class="th-disc text-right">Discount (₹)</th>
+                <th class="th-amt text-right">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="previewItemsBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+
+          <!-- Calculation Totals Box -->
+          <div class="invoice-bottom-grid">
+            <!-- Left: Amount in words & notes -->
+            <div class="invoice-left-notes">
+              <div class="amount-in-words-box">
+                <span class="words-label">Amount in Words:</span>
+                <p class="words-val" id="previewAmountInWords">Rupees Zero Only</p>
+              </div>
+
+              <div class="terms-notes-box">
+                <span class="terms-label">Notes & Terms:</span>
+                <p class="terms-val" id="previewNotes">
+                  Thank you for staying with Palm Resort! Standard check-out is 11:00 AM.
+                </p>
+              </div>
+            </div>
+
+            <!-- Right: Totals, Paid & Balance Due -->
+            <div class="invoice-totals-box">
+              <div class="tot-row">
+                <span>Subtotal:</span>
+                <span id="previewSubtotal">₹ 0.00</span>
+              </div>
+              <div class="tot-row text-success" id="previewDiscountRow">
+                <span>Discount:</span>
+                <span id="previewDiscount">- ₹ 0.00</span>
+              </div>
+              <div class="tot-row" id="previewTaxRow" style="display: none;">
+                <span id="previewTaxLabel">Tax (GST):</span>
+                <span id="previewTax">+ ₹ 0.00</span>
+              </div>
+              <div class="tot-row grand-total-row">
+                <span>Total Amount:</span>
+                <span id="previewTotal">₹ 0.00</span>
+              </div>
+              <div class="tot-row paid-row">
+                <span>Amount Paid:</span>
+                <span id="previewPaid">₹ 0.00</span>
+              </div>
+              <div class="tot-row balance-row" id="previewBalanceRow">
+                <span class="bal-label">Balance Due:</span>
+                <span class="bal-val" id="previewBalanceDue">₹ 0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer & Signature -->
+          <footer class="invoice-sheet-footer">
+            <div class="footer-thankyou">
+              <p class="resort-tagline">✨ We hope you had a pleasant stay at Palm Resort! ✨</p>
+              <p class="resort-web-link">www.palmresort.online • +91 9997742709</p>
+            </div>
+            <div class="footer-signatory">
+              <div class="stamp-container">
+                <img 
+                  src="stamp.jpg" 
+                  alt="Palm Resort Official Stamp" 
+                  class="invoice-stamp-img" 
+                  id="invoiceSheetStamp"
+                  onerror="if(window.PALM_RESORT_STAMP_BASE64) this.src=window.PALM_RESORT_STAMP_BASE64;"
+                >
+              </div>
+              <div class="signatory-line"></div>
+              <p class="signatory-label">Authorized Signatory</p>
+              <p class="signatory-sub">Palm Resort Management</p>
+            </div>
+          </footer>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal / Drawer: History & Used Numbers Manager -->
+  <div class="modal-backdrop" id="historyModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">📋 Invoice History & Used Numbers (1-1000)</h2>
+          <p class="modal-subtitle">Tracking all generated invoice numbers so duplicates are never generated.</p>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseHistory">&times;</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button type="button" class="tab-btn active" id="tabInvoicesBtn">Saved Invoices</button>
+        <button type="button" class="tab-btn" id="tabNumbersBtn">Used Numbers Grid (1-1000)</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab 1: Saved Invoices List -->
+        <div class="tab-pane active" id="tabInvoicesPane">
+          <div class="table-search-bar">
+            <input type="text" id="searchInvoices" placeholder="🔍 Search by customer name, mobile, or invoice #...">
+            <button type="button" class="btn btn-sm btn-outline" id="btnExportJSON">Export JSON</button>
+          </div>
+          <div class="history-table-wrapper">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Inv #</th>
+                  <th>Date</th>
+                  <th>Customer Name</th>
+                  <th>Mobile</th>
+                  <th>Total</th>
+                  <th>Paid</th>
+                  <th>Balance Due</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 2: Used Numbers Grid (1 - 1000) -->
+        <div class="tab-pane" id="tabNumbersPane">
+          <div class="numbers-meta-bar">
+            <div class="stat-pill">
+              <span class="stat-num" id="statUsedCount">0</span>
+              <span class="stat-lbl">Used Numbers</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-num" id="statAvailableCount">1000</span>
+              <span class="stat-lbl">Available Numbers</span>
+            </div>
+            <div class="numbers-actions">
+              <button type="button" class="btn btn-sm btn-danger-outline" id="btnResetAllNumbers">
+                ⚠️ Reset All Numbers
+              </button>
+            </div>
+          </div>
+          <div class="numbers-instruction">
+            Numbers in <strong>Green</strong> are already used. Numbers in <strong>White</strong> are available for new invoices.
+          </div>
+          <div class="numbers-grid" id="numbersGrid">
+            <!-- 1 to 1000 badges populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btnCloseModalBottom">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Sticky Bottom Bar (Visible on mobile/tablet screens) -->
+  <aside class="mobile-bottom-bar" id="mobileBottomBar">
+    <div class="mobile-bar-summary">
+      <span class="m-status-lbl" id="mBottomStatus">DUE</span>
+      <span class="m-status-amt" id="mBottomBalance">₹ 0.00</span>
+    </div>
+    <div class="mobile-bar-actions">
+      <button type="button" class="btn btn-secondary btn-sm" id="btnMobileToggleView">
+        <span id="mToggleText">👁️ Preview</span>
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnMobileDownload">
+        <span>📥 Download PDF</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Modal: Connect Mobile Phone / QR Code -->
+  <div class="modal-backdrop" id="mobileModal">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">📱 Open on Mobile / Phone</h2>
+          <p class="modal-subtitle">Generate & download invoices on your smartphone</p>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseMobileModal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; text-align: center;">
+        <p style="font-size: 0.85rem; margin-bottom: 12px; color: var(--text-main);">
+          Connect your phone to the <strong>same Wi-Fi network</strong> and scan or open:
+        </p>
+        <div class="mobile-url-box" style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input type="text" id="mobileUrlInput" readonly value="http://192.168.29.99:3000" style="font-weight: 700; color: var(--primary);">
+          <button type="button" class="btn btn-primary btn-sm" id="btnCopyMobileUrl">Copy</button>
+        </div>
+        <div class="qr-container">
+          <img id="mobileQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=http://192.168.29.99:3000" alt="Scan QR Code to open on phone" style="width: 170px; height: 170px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; padding: 4px;">
+          <p style="font-size: 0.775rem; color: var(--text-muted); margin-top: 8px;">Scan with Camera app or Google Lens</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btnCloseMobileModalBottom">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Main Application Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>

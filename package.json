@@ -1,0 +1,12 @@
+{
+  "name": "palm-resort-invoice-builder",
+  "version": "1.0.0",
+  "description": "Smart Invoice Builder & Billing System for Palm Resort",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["invoice", "resort", "billing", "pdf"],
+  "author": "Palm Resort",
+  "license": "ISC"
+}

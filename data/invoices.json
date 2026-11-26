@@ -1,0 +1,66 @@
+[
+  {
+    "invoiceNumber": 2,
+    "invoiceDate": "2026-11-26",
+    "customerName": "ajay",
+    "customerMobile": "902932112",
+    "items": [
+      {
+        "description": "Deluxe Cottage Stay (1 Night)",
+        "price": 2000,
+        "qty": 1,
+        "discount": 500,
+        "total": 1500
+      }
+    ],
+    "subtotal": 2000,
+    "totalDiscount": 500,
+    "taxRate": 0,
+    "taxAmount": 0,
+    "grandTotal": 1500,
+    "amountPaid": 1500,
+    "balanceDue": 0,
+    "paymentMode": "Cash",
+    "notes": "Thank you for choosing Palm Resort! Standard Check-in is 1:00 PM and Check-out is 11:00 AM. Please keep this invoice for your records.",
+    "business": {
+      "name": "Palm resort",
+      "phone": "9997742709",
+      "website": "www.palmresort.online",
+      "address": "palm resort near garh ganga up 244235"
+    },
+    "overwrite": true,
+    "savedAt": "2026-11-26T20:53:06.037Z"
+  },
+  {
+    "invoiceNumber": 1,
+    "invoiceDate": "2026-11-26",
+    "customerName": "Ajay",
+    "customerMobile": "7912829110",
+    "items": [
+      {
+        "description": "Standard room",
+        "price": 2000,
+        "qty": 1,
+        "discount": 500,
+        "total": 1500
+      }
+    ],
+    "subtotal": 2000,
+    "totalDiscount": 500,
+    "taxRate": 0,
+    "taxAmount": 0,
+    "grandTotal": 1500,
+    "amountPaid": 1500,
+    "balanceDue": 0,
+    "paymentMode": "UPI / Online",
+    "notes": "Thank you for choosing Palm Resort! Standard Check-in is 12:00 PM and Check-out is 11:00 AM. Please keep this invoice for your records.",
+    "business": {
+      "name": "Palm resort",
+      "phone": "9997742709",
+      "website": "www.palmresort.online",
+      "address": "palm resort near garh ganga up 244235"
+    },
+    "overwrite": true,
+    "savedAt": "2026-11-26T20:47:45.976Z"
+  }
+]
