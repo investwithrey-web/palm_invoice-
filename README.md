@@ -1,5 +1,5 @@
 # 🌴 Palm Resort - Smart Invoice Builder & Billing System
-
+This is only for palm resort only
 A fast, modern, and complete invoice generator tailored specifically for **Palm Resort**.
 
 ---
