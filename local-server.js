@@ -88,8 +88,8 @@ const MIME_TYPES = {
 
 const requestHandler = (req, res) => {
   ensureDataFiles();
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = decodeURIComponent(parsedUrl.pathname);
+  const reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = decodeURIComponent(reqUrl.pathname);
 
   // Enable CORS for flexibility
   res.setHeader('Access-Control-Allow-Origin', '*');

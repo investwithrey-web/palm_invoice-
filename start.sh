@@ -10,7 +10,7 @@ echo "=========================================================="
 echo "Starting local server on http://localhost:3000..."
 
 # Start node server
-node server.js &
+node local-server.js &
 SERVER_PID=$!
 
 sleep 1
